@@ -1,71 +1,82 @@
 #Markov generator
+#Usage: perl markov_generator.pl <input_file.txt> [<num_iterations>]
 
 use strict;
 use warnings;
 
 sub read_file {
+	# Reads a file line-by-line and calls the sub
+	# get_words on each line.
 	my $file = shift;
 	open my $f, $file or die "Couldn't open $file: $!\n";
-	my $subref = \&triple_line;
-	my $text = <$f>;
 	while (my $line = <$f>) {
-		$text = join " ", $text, $line;
-		#$subref->($line);
+		&get_words($line);
 	}
 	#print $text;
-	$subref->($text);
 }
 
-sub triple_line {
+sub get_words {
+	# Splits a line into an array of words, and calls
+	# create_wordmap on each word.
 	my @word_list = split " ", shift;
-	my $subref = \&triple_word;
 	foreach my $word (@word_list) {
-		$subref->($word);
+		&create_wordmap($word);
 	}
 }
 
-sub triple_word {
-	our @prefix;
+sub create_wordmap {
+	# Takes a word as a parameter and adds it to the 
+	# global array "keyphrase". When the keyphrase is two words
+	# long, it is converted to a string and stored as a key in 
+	# the global hash "wordmap". The value associated with the 
+	# keyphrase is a reference to the array of words that immediately 
+	# following the keyphrase in the input file.
+	our @keyphrase;
 	our %wordmap;
 	my $word = shift;
-	if (@prefix == 2) {
-		my $key = join " ", @prefix;
+	if (@keyphrase == 2) {
+		my $key = join " ", @keyphrase;
 		my $aref = $wordmap{$key};
 		push @$aref, $word;
 		$wordmap{$key} = $aref;
-		#print "@prefix => $word\n";
-		shift @prefix;
+		#print "@keyphrase => $word\n";
+		shift @keyphrase;
 	}
-	push @prefix, $word;
+	push @keyphrase, $word;
+}
+
+sub rand_elt {
+	# Picks a random element from an array.
+	$_[rand @_]
 }
 
 sub generator {
+	# Takes a filename as a required argument and the number of 
+	# iterations as an optional argument, calls read_file on the file,
+	# and uses the resulting wordmap to generate random text. 
 	our %wordmap;
 	my $file = shift;
-	my $iterations = shift || 100;
-	my $subref = \&read_file;
-	$subref->($file);
-	my $subref2 = \&rand_elt;
-	my $current_prefix = $subref2->(keys %wordmap);
-	print "$current_prefix ";
+	my $iterations = shift || 250;
+	
+	&read_file($file);
+	
+	my $current_keyphrase = &rand_elt(keys %wordmap);
+	print "$current_keyphrase ";
+	
 	for (my $i = 0; $i < $iterations; $i++) {
-		my $nextword_ref = $wordmap{$current_prefix};
+		my $nextword_ref = $wordmap{$current_keyphrase};
 		if (defined($nextword_ref)) {
-			my $nextword = $subref2->(@$nextword_ref);
+			my $nextword = &rand_elt(@$nextword_ref);
 			print "$nextword ";
-			my @prefix_array = split " ", $current_prefix;
-			shift @prefix_array;
-			$current_prefix = "@prefix_array $nextword";
+			my @keyphrase_array = split " ", $current_keyphrase;
+			shift @keyphrase_array;
+			$current_keyphrase = "@keyphrase_array $nextword";
 		} else {
 			print "\n\nBroke after $i iterations";
 			last;
 		}
 		
 	}
-}
-
-sub rand_elt {
-	$_[rand @_]
 }
 
 generator @ARGV;
