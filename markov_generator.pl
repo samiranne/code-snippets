@@ -7,9 +7,13 @@ sub read_file {
 	my $file = shift;
 	open my $f, $file or die "Couldn't open $file: $!\n";
 	my $subref = \&triple_line;
+	my $text = <$f>;
 	while (my $line = <$f>) {
-		$subref->($line);
+		$text = join " ", $text, $line;
+		#$subref->($line);
 	}
+	#print $text;
+	$subref->($text);
 }
 
 sub triple_line {
@@ -41,18 +45,20 @@ sub generator {
 	my $iterations = shift || 100;
 	my $subref = \&read_file;
 	$subref->($file);
-	my $subref = \&rand_elt;
-	my $current_prefix = $subref->(keys %wordmap);
+	my $subref2 = \&rand_elt;
+	my $current_prefix = $subref2->(keys %wordmap);
 	print "$current_prefix ";
 	for (my $i = 0; $i < $iterations; $i++) {
 		my $nextword_ref = $wordmap{$current_prefix};
 		if (defined($nextword_ref)) {
-			print "@$nextword_ref ";
+			my $nextword = $subref2->(@$nextword_ref);
+			print "$nextword ";
 			my @prefix_array = split " ", $current_prefix;
 			shift @prefix_array;
-			$current_prefix = "@prefix_array @$nextword_ref";
+			$current_prefix = "@prefix_array $nextword";
 		} else {
-			$current_prefix = $subref->(keys %wordmap);
+			print "\n\nBroke after $i iterations";
+			last;
 		}
 		
 	}
